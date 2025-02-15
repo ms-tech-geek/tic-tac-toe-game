@@ -7,6 +7,15 @@ import { Trophy, Medal, Award } from 'lucide-react';
 export const Leaderboard: React.FC = () => {
   const [scores, setScores] = useState<GameScore[]>([]);
 
+  const getRankIndicator = (index: number) => {
+    switch (index) {
+      case 0: return <Trophy className="w-5 h-5 text-yellow-500" />;
+      case 1: return <Medal className="w-5 h-5 text-gray-400" />;
+      case 2: return <Award className="w-5 h-5 text-amber-600" />;
+      default: return <span className="w-5 text-center">{index + 1}</span>;
+    }
+  };
+
   useEffect(() => {
     const q = query(
       collection(db, 'scores'),
@@ -36,11 +45,8 @@ export const Leaderboard: React.FC = () => {
             key={score.userId}
             className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
           >
-            {index === 0 && <Trophy className="w-5 h-5 text-yellow-500" />}
-            {index === 1 && <Medal className="w-5 h-5 text-gray-400" />}
-            {index === 2 && <Award className="w-5 h-5 text-amber-600" />}
-            {index > 2 && <span className="w-5 text-center">{index + 1}</span>}
-            }
+            {getRankIndicator(index)}
+            
             
             <div className="flex-1">
               <p className="font-semibold">{score.userName}</p>
