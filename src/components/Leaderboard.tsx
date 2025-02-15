@@ -5,6 +5,7 @@ import { GameScore } from '../types/game';
 import { Trophy, Medal, Award } from 'lucide-react';
 
 export const Leaderboard: React.FC = () => {
+  const [error, setError] = useState<string | null>(null);
   const [scores, setScores] = useState<GameScore[]>([]);
 
   const getRankIndicator = (index: number) => {
@@ -23,13 +24,26 @@ export const Leaderboard: React.FC = () => {
       limit(10)
     );
 
-    return onSnapshot(q, (snapshot) => {
-      const newScores = snapshot.docs.map(doc => ({
-        ...doc.data(),
-        timestamp: doc.data().timestamp.toDate(),
-      })) as GameScore[];
-      setScores(newScores);
-    });
+    try {
+      return onSnapshot(q, 
+        (snapshot) => {
+          const newScores = snapshot.docs.map(doc => ({
+            ...doc.data(),
+            timestamp: doc.data().timestamp?.toDate() || new Date(),
+          })) as GameScore[];
+          setScores(newScores);
+          setError(null);
+        },
+        (error) => {
+          console.error('Firestore error:', error);
+          setError('Unable to load leaderboard. Please try again later.');
+        }
+      );
+    } catch (error) {
+      console.error('Firestore setup error:', error);
+      setError('Unable to connect to leaderboard.');
+      return () => {};
+    }
   }, []);
 
   return (
@@ -40,7 +54,15 @@ export const Leaderboard: React.FC = () => {
       </div>
       
       <div className="space-y-4">
-        {scores.map((score, index) => (
+        {error ? (
+          <div className="text-center p-4 text-red-600">
+            <p>{error}</p>
+          </div>
+        ) : scores.length === 0 ? (
+          <div className="text-center p-4 text-gray-500">
+            <p>No scores yet. Be the first to play!</p>
+          </div>
+        ) : scores.map((score, index) => (
           <div
             key={score.userId}
             className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
