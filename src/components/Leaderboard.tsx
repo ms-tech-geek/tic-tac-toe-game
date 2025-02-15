@@ -3,10 +3,12 @@ import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestor
 import { db } from '../lib/firebase';
 import { GameScore } from '../types/game';
 import { Trophy, Medal, Award } from 'lucide-react';
+import { FirebaseError } from 'firebase/app';
 
 export const Leaderboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [scores, setScores] = useState<GameScore[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const getRankIndicator = (index: number) => {
     switch (index) {
@@ -25,6 +27,7 @@ export const Leaderboard: React.FC = () => {
     );
 
     try {
+      setLoading(true);
       return onSnapshot(q, 
         (snapshot) => {
           const newScores = snapshot.docs.map(doc => ({
@@ -33,15 +36,31 @@ export const Leaderboard: React.FC = () => {
           })) as GameScore[];
           setScores(newScores);
           setError(null);
+          setLoading(false);
         },
-        (error) => {
+        (error: FirebaseError) => {
           console.error('Firestore error:', error);
-          setError('Unable to load leaderboard. Please try again later.');
+          let errorMessage = 'Unable to load leaderboard. ';
+          
+          switch (error.code) {
+            case 'permission-denied':
+              errorMessage += 'Permission denied. Please check Firestore rules.';
+              break;
+            case 'unavailable':
+              errorMessage += 'Service is temporarily unavailable. Please try again later.';
+              break;
+            default:
+              errorMessage += 'Please try again later.';
+          }
+          
+          setError(errorMessage);
+          setLoading(false);
         }
       );
     } catch (error) {
       console.error('Firestore setup error:', error);
       setError('Unable to connect to leaderboard.');
+      setLoading(false);
       return () => {};
     }
   }, []);
@@ -54,7 +73,11 @@ export const Leaderboard: React.FC = () => {
       </div>
       
       <div className="space-y-4">
-        {error ? (
+        {loading ? (
+          <div className="text-center p-4 text-gray-500">
+            <p>Loading leaderboard...</p>
+          </div>
+        ) : error ? (
           <div className="text-center p-4 text-red-600">
             <p>{error}</p>
           </div>
