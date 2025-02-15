@@ -5,9 +5,19 @@ import { GameControls } from './components/GameControls';
 import { GameStatus } from './components/GameStatus';
 import { Leaderboard } from './components/Leaderboard';
 import { auth } from './lib/firebase';
+import { User } from 'firebase/auth';
 
 function App() {
-  const [user] = React.useState(auth.currentUser);
+  const [user, setUser] = React.useState<User | null>(auth.currentUser);
+
+  React.useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      setUser(user);
+      console.log('Auth state updated in App:', user?.email);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
