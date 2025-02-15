@@ -13,8 +13,14 @@ export const Auth: React.FC = () => {
   const handleSignIn = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error('Error signing in:', error);
+    } catch (error: any) {
+      console.error('Authentication error:', error.code, error.message);
+      // Show user-friendly error message
+      if (error.code === 'auth/operation-not-allowed') {
+        alert('Google sign-in is not enabled. Please contact the administrator.');
+      } else {
+        alert('Failed to sign in. Please try again later.');
+      }
     }
   };
 
