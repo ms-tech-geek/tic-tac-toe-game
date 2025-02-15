@@ -1,6 +1,20 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
+import { 
+  getAuth, 
+  GoogleAuthProvider, 
+  onAuthStateChanged,
+  type Auth,
+  type Firestore 
+} from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+
+// Create a type for our Firebase services
+interface FirebaseServices {
+  app: ReturnType<typeof initializeApp>;
+  auth: Auth;
+  db: Firestore;
+  googleProvider: GoogleAuthProvider;
+}
 
 // Validate required environment variables
 const requiredEnvVars = [
@@ -28,40 +42,48 @@ const firebaseConfig = {
   appId: import.meta.env.VITE_FIREBASE_APP_ID
 };
 
-let app;
-try {
-  app = initializeApp(firebaseConfig);
-  console.log('Firebase app initialized successfully');
-} catch (error: any) {
-  if (!/already exists/.test(error.message)) {
-    console.error('Firebase initialization error:', error.stack);
-  }
-}
+// Initialize Firebase services
+const initializeFirebase = (): FirebaseServices => {
+  try {
+    const app = initializeApp(firebaseConfig);
+    console.log('Firebase app initialized successfully');
 
-const auth = getAuth(app);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const googleProvider = new GoogleAuthProvider();
 
-// Log auth state changes
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    console.log('Auth state changed: User is signed in', {
-      uid: user.uid,
-      email: user.email,
-      provider: user.providerData[0]?.providerId
+    // Configure Google provider
+    googleProvider.setCustomParameters({
+      prompt: 'select_account',
+      // Add COOP settings to handle the warning
+      auth_type: 'rerequest',
+      access_type: 'offline'
     });
-  } else {
-    console.log('Auth state changed: User is signed out');
+
+    // Set up auth state listener
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log('Auth state changed: User is signed in', {
+          uid: user.uid,
+          email: user.email,
+          provider: user.providerData[0]?.providerId
+        });
+      } else {
+        console.log('Auth state changed: User is signed out');
+      }
+    });
+
+    console.log('Firebase services initialized');
+    return { app, auth, db, googleProvider };
+  } catch (error: any) {
+    if (!/already exists/.test(error.message)) {
+      console.error('Firebase initialization error:', error.stack);
+    }
+    throw error;
   }
-});
+};
 
-export const db = getFirestore(app);
+// Initialize and export Firebase services
+const { app, auth, db, googleProvider } = initializeFirebase();
 
-const googleProvider = new GoogleAuthProvider();
-googleProvider.setCustomParameters({
-  prompt: 'select_account'
-});
-
-console.log('Firebase services initialized');
-
-export { auth };
-
-export { app, googleProvider };
+export { app, auth, db, googleProvider };
