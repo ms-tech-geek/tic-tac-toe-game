@@ -12,14 +12,35 @@ export const Auth: React.FC = () => {
 
   const handleSignIn = async () => {
     try {
+      console.log('Attempting Google sign-in...');
       await signInWithPopup(auth, googleProvider);
+      console.log('Google sign-in successful');
     } catch (error: any) {
-      console.error('Authentication error:', error.code, error.message);
+      console.error('Authentication error:', {
+        code: error.code,
+        message: error.message,
+        stack: error.stack,
+        credential: error.credential,
+        email: error.email,
+        phoneNumber: error.phoneNumber
+      });
+
       // Show user-friendly error message
-      if (error.code === 'auth/operation-not-allowed') {
-        alert('Google sign-in is not enabled. Please contact the administrator.');
-      } else {
-        alert('Failed to sign in. Please try again later.');
+      switch (error.code) {
+        case 'auth/operation-not-allowed':
+          alert('Google sign-in is not enabled. Please ensure it is enabled in the Firebase Console.');
+          break;
+        case 'auth/popup-blocked':
+          alert('Sign-in popup was blocked. Please allow popups for this site.');
+          break;
+        case 'auth/popup-closed-by-user':
+          console.log('Sign-in popup was closed by the user');
+          break;
+        case 'auth/cancelled-popup-request':
+          console.log('Sign-in popup request was cancelled');
+          break;
+        default:
+          alert(`Sign-in failed: ${error.message}`);
       }
     }
   };

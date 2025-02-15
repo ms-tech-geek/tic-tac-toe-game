@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { getAuth, GoogleAuthProvider, onAuthStateChanged } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 // Validate required environment variables
@@ -12,9 +12,12 @@ const requiredEnvVars = [
 
 for (const envVar of requiredEnvVars) {
   if (!import.meta.env[envVar]) {
+    console.error(`Firebase config error: ${envVar} is not defined`);
     throw new Error(`Missing required environment variable: ${envVar}`);
   }
 }
+
+console.log('Firebase config validation passed');
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -28,18 +31,37 @@ const firebaseConfig = {
 let app;
 try {
   app = initializeApp(firebaseConfig);
+  console.log('Firebase app initialized successfully');
 } catch (error: any) {
   if (!/already exists/.test(error.message)) {
     console.error('Firebase initialization error:', error.stack);
   }
 }
 
-export const auth = getAuth(app);
+const auth = getAuth(app);
+
+// Log auth state changes
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log('Auth state changed: User is signed in', {
+      uid: user.uid,
+      email: user.email,
+      provider: user.providerData[0]?.providerId
+    });
+  } else {
+    console.log('Auth state changed: User is signed out');
+  }
+});
+
 export const db = getFirestore(app);
 
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
+
+console.log('Firebase services initialized');
+
+export { auth };
 
 export { app, googleProvider };
