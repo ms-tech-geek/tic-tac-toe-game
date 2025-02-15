@@ -1,89 +1,55 @@
-import React, { useEffect, useState } from 'react';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { GameScore } from '../types/game';
-import { Trophy, Medal, Award } from 'lucide-react';
+import React from 'react';
+import { Auth } from './components/Auth';
+import { GameBoard } from './components/GameBoard';
+import { GameControls } from './components/GameControls';
+import { GameStatus } from './components/GameStatus';
+import { Leaderboard } from './components/Leaderboard';
+import { auth } from './lib/firebase';
+import { User } from 'firebase/auth';
 
-export const Leaderboard: React.FC = () => {
-  const [error, setError] = useState<string | null>(null);
-  const [scores, setScores] = useState<GameScore[]>([]);
+function App() {
+  const [user, setUser] = React.useState<User | null>(auth.currentUser);
 
-  const getRankIndicator = (index: number) => {
-    switch (index) {
-      case 0: return <Trophy className="w-5 h-5 text-yellow-500" />;
-      case 1: return <Medal className="w-5 h-5 text-gray-400" />;
-      case 2: return <Award className="w-5 h-5 text-amber-600" />;
-      default: return <span className="w-5 text-center">{index + 1}</span>;
-    }
-  };
+  React.useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      setUser(user);
+      console.log('Auth state updated in App:', user?.email);
+    });
 
-  useEffect(() => {
-    const q = query(
-      collection(db, 'scores'),
-      orderBy('wins', 'desc'),
-      limit(10)
-    );
-
-    try {
-      return onSnapshot(q, 
-        (snapshot) => {
-          const newScores = snapshot.docs.map(doc => ({
-            ...doc.data(),
-            timestamp: doc.data().timestamp?.toDate() || new Date(),
-          })) as GameScore[];
-          setScores(newScores);
-          setError(null);
-        },
-        (error) => {
-          console.error('Firestore error:', error);
-          setError('Unable to load leaderboard. Please try again later.');
-        }
-      );
-    } catch (error) {
-      console.error('Firestore setup error:', error);
-      setError('Unable to connect to leaderboard.');
-      return () => {};
-    }
+    return () => unsubscribe();
   }, []);
 
   return (
-    <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Trophy className="w-6 h-6 text-yellow-500" />
-        <h2 className="text-xl font-bold">Leaderboard</h2>
-      </div>
-      
-      <div className="space-y-4">
-        {error ? (
-          <div className="text-center p-4 text-red-600">
-            <p>{error}</p>
-          </div>
-        ) : scores.length === 0 ? (
-          <div className="text-center p-4 text-gray-500">
-            <p>No scores yet. Be the first to play!</p>
-          </div>
-        ) : scores.map((score, index) => (
-          <div
-            key={score.userId}
-            className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
-          >
-            {getRankIndicator(index)}
-            
-            
-            <div className="flex-1">
-              <p className="font-semibold">{score.userName}</p>
-              <p className="text-sm text-gray-600">
-                {score.wins} wins · {score.losses} losses · {score.draws} draws
-              </p>
+    <div className="min-h-screen bg-gray-100 p-8">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <div className="flex justify-end">
+          <Auth />
+        </div>
+
+        {user ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <GameStatus />
+              <div className="flex items-center justify-center">
+                <GameBoard />
+              </div>
+              <GameControls />
             </div>
-            
-            <div className="text-sm text-gray-500">
-              <p>{score.difficulty}</p>
-              <p>{score.boardSize}x{score.boardSize}</p>
-            </div>
+            <Leaderboard />
           </div>
-        ))}
+        ) : (
+          <div className="text-center space-y-4">
+            <h1 className="text-3xl font-bold text-gray-800">
+              Welcome to Tic Tac Toe!
+            </h1>
+            <p className="text-gray-600">
+              Sign in to start playing against the computer and track your scores.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
-};
+}
+
+export default App;
