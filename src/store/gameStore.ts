@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { GameState, Player, GameDifficulty, BoardSize, Cell, CategoryScore } from '../types/game';
 import { calculateWinner, minimax } from '../utils/gameLogic';
 import { auth, db } from '../lib/firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 interface GameStore extends GameState {
   initializeBoard: (size: BoardSize) => void;
@@ -70,19 +70,19 @@ const saveUserSettings = async (difficulty: GameDifficulty, boardSize: BoardSize
   if (!user) return;
   
   try {
-    // Store settings in a subcollection of the user's document
-    const settingsRef = doc(db, 'users', user.uid);
-    await setDoc(settingsRef, {
-      settings: {
-        difficulty,
-        boardSize,
-        updatedAt: new Date()
-      }
-    }, { merge: true });
+    const settingsRef = doc(db, 'user_settings', user.uid);
+    await setDoc(settingsRef, { 
+      userId: user.uid,
+      userName: user.displayName || 'Anonymous',
+      difficulty,
+      boardSize,
+      updatedAt: new Date()
+    });
     
     console.log('Settings saved successfully');
   } catch (error) {
     console.error('Error saving settings:', error);
+    throw error;
   }
 };
 
@@ -91,28 +91,56 @@ const loadUserSettings = async () => {
   if (!user) return null;
 
   try {
-    const settingsRef = doc(db, 'users', user.uid);
+    const settingsRef = doc(db, 'user_settings', user.uid);
     const settingsDoc = await getDoc(settingsRef);
-    
+
     if (settingsDoc.exists()) {
       const data = settingsDoc.data();
-      const settings = data.settings;
-      
-      if (settings) {
+      if (data) {
+        console.log('Loaded settings for user:', user.uid, data);
         return {
-          difficulty: settings.difficulty as GameDifficulty,
-          boardSize: settings.boardSize as BoardSize
+          difficulty: data.difficulty as GameDifficulty,
+          boardSize: data.boardSize as BoardSize
         };
       }
     }
+    
+    // If no settings exist, create default settings
+    const defaultSettings = {
+      difficulty: 'easy' as GameDifficulty,
+      boardSize: 3 as BoardSize
+    };
+    
+    await saveUserSettings(defaultSettings.difficulty, defaultSettings.boardSize);
+    return defaultSettings;
+    
   } catch (error) {
     console.error('Error loading settings:', error);
+    throw error;
   }
-  
-  return null;
 };
 
-const useGameStore = create<GameStore>((set, get) => ({
+const useGameStore = create<GameStore>((set, get) => {
+  // Set up auth state listener
+  auth.onAuthStateChanged(async (user) => {
+    if (user) {
+      try {
+        const settings = await loadUserSettings();
+        if (settings) {
+          set({ 
+            difficulty: settings.difficulty,
+            boardSize: settings.boardSize
+          });
+          get().initializeBoard(settings.boardSize);
+        }
+      } catch (error) {
+        console.error('Error in auth state change:', error);
+      }
+    }
+  });
+
+  return {
+  }
   board: createEmptyBoard(3),
   currentPlayer: 'X',
   winner: null,
@@ -193,22 +221,27 @@ const useGameStore = create<GameStore>((set, get) => ({
   saveSettings: async () => {
     const { difficulty, boardSize } = get();
     await saveUserSettings(difficulty, boardSize);
-    console.log('Settings saved:', { difficulty, boardSize });
+    console.log('Settings saved for user:', auth.currentUser?.uid);
   },
 
   loadSettings: async () => {
-    const settings = await loadUserSettings();
-    if (settings) {
-      console.log('Settings loaded:', settings);
-      set({ 
-        difficulty: settings.difficulty,
-        boardSize: settings.boardSize
-      });
-      get().initializeBoard(settings.boardSize);
-    } else {
-      console.log('No settings found, using defaults');
+    if (auth.currentUser) {
+      try {
+        const settings = await loadUserSettings();
+        if (settings) {
+          set({ 
+            difficulty: settings.difficulty,
+            boardSize: settings.boardSize
+          });
+          get().initializeBoard(settings.boardSize);
+          console.log('Settings loaded for user:', auth.currentUser.uid);
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
     }
   }
-}));
+}
+)
 
 export { useGameStore };
