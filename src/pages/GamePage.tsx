@@ -2,8 +2,7 @@ import React from 'react';
 import { GameBoard } from '../components/GameBoard';
 import { GameStatus } from '../components/GameStatus';
 import { useGameStore } from '../store/gameStore';
-import { RotateCcw, Settings } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { RotateCcw } from 'lucide-react';
 
 export const GamePage: React.FC = () => {
   const resetGame = useGameStore(state => state.resetGame);
@@ -30,15 +29,6 @@ export const GamePage: React.FC = () => {
           <RotateCcw className="w-5 h-5" />
           Reset Game
         </button>
-        
-        <Link
-          to="/settings"
-          className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-md 
-            hover:bg-gray-700 transition-colors"
-        >
-          <Settings className="w-5 h-5" />
-          Game Settings
-        </Link>
       </div>
     </div>
   );
