@@ -1,14 +1,23 @@
 import React from 'react';
-import { Trophy, Settings, User, GamepadIcon } from 'lucide-react';
+import { Trophy, Settings, User, GamepadIcon, LogOut } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { auth } from '../lib/firebase';
 import { Auth } from './Auth';
+import { signOut } from 'firebase/auth';
 
 export const Navigation: React.FC = () => {
   const location = useLocation();
   const user = auth.currentUser;
 
   const isActive = (path: string) => location.pathname === path;
+  
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
 
   return (
     <nav className="bg-white shadow-md">
@@ -31,6 +40,18 @@ export const Navigation: React.FC = () => {
               >
                 <GamepadIcon className="w-5 h-5" />
                 Game
+              </Link>
+
+              <Link
+                to="/profile"
+                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors
+                  ${isActive('/profile') 
+                    ? 'bg-blue-50 text-blue-600' 
+                    : 'text-gray-600 hover:bg-gray-50'
+                  }`}
+              >
+                <User className="w-5 h-5" />
+                Profile
               </Link>
 
               <Link
@@ -57,17 +78,14 @@ export const Navigation: React.FC = () => {
                 Settings
               </Link>
 
-              <Link
-                to="/profile"
-                className={`flex items-center gap-2 px-4 py-2 rounded-md transition-colors
-                  ${isActive('/profile') 
-                    ? 'bg-blue-50 text-blue-600' 
-                    : 'text-gray-600 hover:bg-gray-50'
-                  }`}
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 
+                  rounded-md transition-colors"
               >
-                <User className="w-5 h-5" />
-                Profile
-              </Link>
+                <LogOut className="w-5 h-5" />
+                Sign Out
+              </button>
             </div>
           ) : (
             <div>
