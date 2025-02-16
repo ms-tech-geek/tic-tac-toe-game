@@ -5,7 +5,6 @@ import { GamePage } from './pages/GamePage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { ProfilePage } from './pages/ProfilePage';
-import { Auth } from './components/Auth';
 import { auth } from './lib/firebase';
 import { User } from 'firebase/auth';
 
@@ -28,10 +27,6 @@ function App() {
         
         <div className="p-8">
           <div className="max-w-6xl mx-auto space-y-8">
-            <div className="flex justify-end">
-              <Auth />
-            </div>
-
             {user ? (
               <Routes>
                 <Route path="/" element={<GamePage />} />

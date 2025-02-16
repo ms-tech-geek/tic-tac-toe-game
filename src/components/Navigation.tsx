@@ -2,6 +2,7 @@ import React from 'react';
 import { Trophy, Settings, User, GamepadIcon } from 'lucide-react';
 import { useLocation, Link } from 'react-router-dom';
 import { auth } from '../lib/firebase';
+import { Auth } from './Auth';
 
 export const Navigation: React.FC = () => {
   const location = useLocation();
@@ -17,8 +18,8 @@ export const Navigation: React.FC = () => {
             <GamepadIcon className="w-6 h-6 text-blue-600" />
             Tic Tac Toe
           </Link>
-
-          {user && (
+          
+          {user ? (
             <div className="flex items-center gap-4">
               <Link
                 to="/"
@@ -67,6 +68,10 @@ export const Navigation: React.FC = () => {
                 <User className="w-5 h-5" />
                 Profile
               </Link>
+            </div>
+          ) : (
+            <div>
+              <Auth />
             </div>
           )}
         </div>
