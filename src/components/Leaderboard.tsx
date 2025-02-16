@@ -2,10 +2,10 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { UserScores, GameDifficulty, BoardSize, CategoryScore, UserProfile } from '../types/game';
-import { FirebaseError } from 'firebase/app';
 import { Trophy, Medal, Award, Trash2, X } from 'lucide-react';
 import { PlayerProfile } from './PlayerProfile';
-import { deleteDoc, getDocs } from 'firebase/firestore';
+import { deleteDoc, getDocs, doc, getDoc } from 'firebase/firestore';
+import { FirebaseError } from 'firebase/app';
 
 type LeaderboardCategory = {
   difficulty: GameDifficulty;
@@ -235,8 +235,20 @@ export const Leaderboard: React.FC = () => {
             key={score.userId}
             className="w-full flex items-center gap-4 p-4 bg-gray-50 rounded-lg cursor-pointer 
               hover:bg-gray-100 transition-colors text-left"
-            onClick={() => {
-              setSelectedPlayer(score);
+            onClick={async () => {
+              try {
+                const docRef = doc(db, 'scores', score.userId);
+                const docSnap = await getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                  setSelectedPlayer({
+                    ...docSnap.data(),
+                    timestamp: docSnap.data().timestamp?.toDate() || new Date(),
+                  } as UserScores);
+                }
+              } catch (error) {
+                console.error('Error fetching player data:', error);
+              }
             }}
           >
             <div className="flex items-center gap-3 flex-1">
