@@ -24,6 +24,12 @@ export interface GameScore {
   boardSize: BoardSize;
 }
 
+export interface UserProfile {
+  userId: string;
+  userName: string;
+  photoURL?: string;
+}
+
 export interface CategoryScore {
   wins: number;
   losses: number;
@@ -33,6 +39,7 @@ export interface CategoryScore {
 export interface UserScores {
   userId: string;
   userName: string;
+  photoURL?: string;
   categories: {
     [key: string]: CategoryScore;  // key format: "difficulty-boardSize"
   };

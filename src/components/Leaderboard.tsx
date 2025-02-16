@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
-import { UserScores, GameDifficulty, BoardSize, CategoryScore } from '../types/game';
+import { UserScores, GameDifficulty, BoardSize, CategoryScore, UserProfile } from '../types/game';
 import { Trophy, Medal, Award, Trash2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 import { PlayerProfile } from './PlayerProfile';
@@ -11,6 +11,11 @@ type LeaderboardCategory = {
   difficulty: GameDifficulty;
   boardSize: BoardSize;
 };
+
+interface PlayerStats extends UserProfile {
+  stats: CategoryScore;
+  photoURL?: string;
+}
 
 export const Leaderboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +61,7 @@ export const Leaderboard: React.FC = () => {
       .map(score => ({
         userId: score.userId,
         userName: score.userName,
+        photoURL: score.photoURL,
         stats: score.categories[categoryKey]
       }))
       .sort((a, b) => {
@@ -225,27 +231,42 @@ export const Leaderboard: React.FC = () => {
             <p>No scores yet for {selectedCategory.difficulty} mode {selectedCategory.boardSize}x{selectedCategory.boardSize}</p>
           </div>
         ) : filteredScores.map((score, index) => (
-          <div
+          <button
             key={score.userId}
-            className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+            className="w-full flex items-center gap-4 p-4 bg-gray-50 rounded-lg cursor-pointer 
+              hover:bg-gray-100 transition-colors text-left"
             onClick={() => {
               const playerData = scores.find(s => s.userId === score.userId);
               if (playerData) setSelectedPlayer(playerData);
             }}
           >
-            {getRankIndicator(index)}
-            
-            
-            <div className="flex-1">
-              <p className="font-semibold">{score.userName}</p>
-              <p className="text-sm text-gray-600">
-                Win rate: {formatWinRate(score.stats)}
-              </p>
-              <p className="text-xs text-gray-500">
-                {score.stats.wins}W · {score.stats.losses}L · {score.stats.draws}D
-              </p>
+            <div className="flex items-center gap-3 flex-1">
+              <div className="relative">
+                {getRankIndicator(index)}
+                <img
+                  src={score.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${score.userName}`}
+                  alt={score.userName}
+                  className="w-12 h-12 rounded-full object-cover"
+                />
+              </div>
+              
+              <div className="flex-1">
+                <p className="font-semibold text-gray-900">{score.userName}</p>
+                <div className="flex items-center gap-2 text-sm">
+                  <span className="text-green-600 font-medium">{score.stats.wins}W</span>
+                  <span className="text-red-600 font-medium">{score.stats.losses}L</span>
+                  <span className="text-gray-600 font-medium">{score.stats.draws}D</span>
+                </div>
+              </div>
+              
+              <div className="text-right">
+                <div className="text-lg font-bold text-blue-600">
+                  {formatWinRate(score.stats)}
+                </div>
+                <div className="text-xs text-gray-500">Win Rate</div>
+              </div>
             </div>
-          </div>
+          </button>
         ))}
         
         <div className="text-center text-sm text-gray-500 mt-2">
