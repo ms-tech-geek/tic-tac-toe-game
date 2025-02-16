@@ -2,21 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { UserScores } from '../types/game';
-import { useNavigate } from 'react-router-dom';
 import { PlayerProfile } from '../components/PlayerProfile';
 
 export const ProfilePage: React.FC = () => {
   const [playerData, setPlayerData] = useState<UserScores | null>(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
   const user = auth.currentUser;
 
   useEffect(() => {
-    if (!user) {
-      navigate('/');
-      return;
-    }
-
     const fetchProfile = async () => {
       try {
         const docRef = doc(db, 'scores', user.uid);
@@ -42,8 +35,10 @@ export const ProfilePage: React.FC = () => {
       }
     };
 
-    fetchProfile();
-  }, [user, navigate]);
+    if (user) {
+      fetchProfile();
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -62,8 +57,8 @@ export const ProfilePage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <PlayerProfile playerData={playerData} onClose={() => {}} />
+    <div className="max-w-4xl mx-auto">
+      <PlayerProfile playerData={playerData} />
     </div>
   );
 };

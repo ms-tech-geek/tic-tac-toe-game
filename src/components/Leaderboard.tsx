@@ -4,7 +4,7 @@ import { db, auth } from '../lib/firebase';
 import { UserScores, GameDifficulty, BoardSize, CategoryScore, UserProfile } from '../types/game';
 import { Trophy, Medal, Award, Trash2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
-import { PlayerProfile } from './PlayerProfile';
+import { useNavigate } from 'react-router-dom';
 import { deleteDoc, getDocs } from 'firebase/firestore';
 
 type LeaderboardCategory = {
@@ -21,11 +21,11 @@ export const Leaderboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [scores, setScores] = useState<UserScores[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPlayer, setSelectedPlayer] = useState<UserScores | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<LeaderboardCategory>({
     difficulty: 'easy',
     boardSize: 3
   });
+  const navigate = useNavigate();
 
   const getRankIndicator = (index: number) => {
     switch (index) {
@@ -236,8 +236,7 @@ export const Leaderboard: React.FC = () => {
             className="w-full flex items-center gap-4 p-4 bg-gray-50 rounded-lg cursor-pointer 
               hover:bg-gray-100 transition-colors text-left"
             onClick={() => {
-              const playerData = scores.find(s => s.userId === score.userId);
-              if (playerData) setSelectedPlayer(playerData);
+              navigate(`/profile/${score.userId}`);
             }}
           >
             <div className="flex items-center gap-3 flex-1">
@@ -273,13 +272,6 @@ export const Leaderboard: React.FC = () => {
           Showing top 5 players for {selectedCategory.difficulty} mode
           {' '}{selectedCategory.boardSize}x{selectedCategory.boardSize}
         </div>
-        
-        {selectedPlayer && (
-          <PlayerProfile
-            playerData={selectedPlayer}
-            onClose={() => setSelectedPlayer(null)}
-          />
-        )}
       </div>
     </div>
   );
