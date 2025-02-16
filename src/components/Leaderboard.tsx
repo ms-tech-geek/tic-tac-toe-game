@@ -2,9 +2,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { UserScores, GameDifficulty, BoardSize, CategoryScore, UserProfile } from '../types/game';
-import { Trophy, Medal, Award, Trash2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
-import { useNavigate } from 'react-router-dom';
+import { Trophy, Medal, Award, Trash2, X } from 'lucide-react';
+import { PlayerProfile } from './PlayerProfile';
 import { deleteDoc, getDocs } from 'firebase/firestore';
 
 type LeaderboardCategory = {
@@ -21,11 +21,11 @@ export const Leaderboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [scores, setScores] = useState<UserScores[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPlayer, setSelectedPlayer] = useState<UserScores | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<LeaderboardCategory>({
     difficulty: 'easy',
     boardSize: 3
   });
-  const navigate = useNavigate();
 
   const getRankIndicator = (index: number) => {
     switch (index) {
@@ -236,7 +236,7 @@ export const Leaderboard: React.FC = () => {
             className="w-full flex items-center gap-4 p-4 bg-gray-50 rounded-lg cursor-pointer 
               hover:bg-gray-100 transition-colors text-left"
             onClick={() => {
-              navigate(`/profile/${score.userId}`);
+              setSelectedPlayer(score);
             }}
           >
             <div className="flex items-center gap-3 flex-1">
@@ -272,6 +272,20 @@ export const Leaderboard: React.FC = () => {
           Showing top 5 players for {selectedCategory.difficulty} mode
           {' '}{selectedCategory.boardSize}x{selectedCategory.boardSize}
         </div>
+        
+        {selectedPlayer && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative">
+              <button
+                onClick={() => setSelectedPlayer(null)}
+                className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 z-10"
+              >
+                <X className="w-6 h-6" />
+              </button>
+              <PlayerProfile playerData={selectedPlayer} isModal={true} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

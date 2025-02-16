@@ -4,9 +4,10 @@ import { Trophy, Medal, Award } from 'lucide-react';
 
 interface PlayerProfileProps {
   playerData: UserScores;
+  isModal?: boolean;
 }
 
-export const PlayerProfile: React.FC<PlayerProfileProps> = ({ playerData }) => {
+export const PlayerProfile: React.FC<PlayerProfileProps> = ({ playerData, isModal = false }) => {
   const formatWinRate = (stats: CategoryScore) => {
     const total = stats.wins + stats.losses + stats.draws;
     if (total === 0) return '0%';
@@ -27,7 +28,7 @@ export const PlayerProfile: React.FC<PlayerProfileProps> = ({ playerData }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-xl w-full overflow-hidden">
+    <div className={`bg-white rounded-lg ${!isModal && 'shadow-xl'} w-full overflow-hidden`}>
       <div className="bg-white border-b border-gray-200 px-6 py-4">
         <h2 className="text-xl font-bold flex items-center gap-2">
           <img
