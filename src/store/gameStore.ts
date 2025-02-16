@@ -10,6 +10,8 @@ interface GameStore extends GameState {
   setDifficulty: (difficulty: GameDifficulty) => void;
   setBoardSize: (size: BoardSize) => void;
   resetGame: () => void;
+  saveSettings: () => Promise<void>;
+  loadSettings: () => Promise<void>;
 }
 
 const createEmptyBoard = (size: BoardSize): Cell[][] => 
@@ -63,6 +65,53 @@ const updateUserScore = async (result: 'win' | 'loss' | 'draw', difficulty: Game
   }
 };
 
+const saveUserSettings = async (difficulty: GameDifficulty, boardSize: BoardSize) => {
+  const user = auth.currentUser;
+  if (!user) return;
+  
+  try {
+    // Store settings in a subcollection of the user's document
+    const settingsRef = doc(db, 'users', user.uid);
+    await setDoc(settingsRef, {
+      settings: {
+        difficulty,
+        boardSize,
+        updatedAt: new Date()
+      }
+    }, { merge: true });
+    
+    console.log('Settings saved successfully');
+  } catch (error) {
+    console.error('Error saving settings:', error);
+  }
+};
+
+const loadUserSettings = async () => {
+  const user = auth.currentUser;
+  if (!user) return null;
+
+  try {
+    const settingsRef = doc(db, 'users', user.uid);
+    const settingsDoc = await getDoc(settingsRef);
+    
+    if (settingsDoc.exists()) {
+      const data = settingsDoc.data();
+      const settings = data.settings;
+      
+      if (settings) {
+        return {
+          difficulty: settings.difficulty as GameDifficulty,
+          boardSize: settings.boardSize as BoardSize
+        };
+      }
+    }
+  } catch (error) {
+    console.error('Error loading settings:', error);
+  }
+  
+  return null;
+};
+
 const useGameStore = create<GameStore>((set, get) => ({
   board: createEmptyBoard(3),
   currentPlayer: 'X',
@@ -84,7 +133,7 @@ const useGameStore = create<GameStore>((set, get) => ({
   makeMove: (row, col) => {
     const state = get();
     if (state.board[row][col] || state.winner || state.currentPlayer !== 'X') return;
-
+    
     const newBoard = state.board.map(row => [...row]);
     newBoard[row][col] = state.currentPlayer;
 
@@ -130,9 +179,36 @@ const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  setDifficulty: (difficulty) => set({ difficulty }),
-  setBoardSize: (size) => get().initializeBoard(size),
+  setDifficulty: (difficulty) => {
+    set({ difficulty });
+  },
+
+  setBoardSize: (size) => {
+    set({ boardSize: size });
+    get().initializeBoard(size);
+  },
+
   resetGame: () => get().initializeBoard(get().boardSize),
+
+  saveSettings: async () => {
+    const { difficulty, boardSize } = get();
+    await saveUserSettings(difficulty, boardSize);
+    console.log('Settings saved:', { difficulty, boardSize });
+  },
+
+  loadSettings: async () => {
+    const settings = await loadUserSettings();
+    if (settings) {
+      console.log('Settings loaded:', settings);
+      set({ 
+        difficulty: settings.difficulty,
+        boardSize: settings.boardSize
+      });
+      get().initializeBoard(settings.boardSize);
+    } else {
+      console.log('No settings found, using defaults');
+    }
+  }
 }));
 
 export { useGameStore };

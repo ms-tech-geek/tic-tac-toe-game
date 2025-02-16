@@ -1,13 +1,21 @@
 import React from 'react';
 import { useGameStore } from '../store/gameStore';
 import { GameDifficulty, BoardSize } from '../types/game';
-import { Settings } from 'lucide-react';
+import { Settings, Save } from 'lucide-react';
 
 export const GameControls: React.FC = () => {
-  const { difficulty, boardSize, setDifficulty, setBoardSize, resetGame } = useGameStore();
+  const { difficulty, boardSize, setDifficulty, setBoardSize, saveSettings } = useGameStore();
+  const [isSaving, setIsSaving] = React.useState(false);
 
   const difficulties: GameDifficulty[] = ['easy', 'medium', 'hard'];
   const boardSizes: BoardSize[] = [3, 4, 5];
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    await saveSettings();
+    alert('Game settings saved successfully!');
+    setIsSaving(false);
+  };
 
   return (
     <div className="flex flex-col gap-4 p-4 bg-white rounded-lg shadow-md">
@@ -60,11 +68,14 @@ export const GameControls: React.FC = () => {
         </div>
 
         <button
-          className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 
-            transition-colors font-medium"
-          onClick={resetGame}
+          className={`w-full px-4 py-2 bg-blue-600 text-white rounded-md 
+            hover:bg-blue-700 transition-colors font-medium flex items-center 
+            justify-center gap-2 ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
+          onClick={handleSave}
+          disabled={isSaving}
         >
-          Reset Game
+          <Save className="w-5 h-5" />
+          {isSaving ? 'Saving...' : 'Save Settings'}
         </button>
       </div>
     </div>
