@@ -23,3 +23,18 @@ export interface GameScore {
   difficulty: GameDifficulty;
   boardSize: BoardSize;
 }
+
+export interface CategoryScore {
+  wins: number;
+  losses: number;
+  draws: number;
+}
+
+export interface UserScores {
+  userId: string;
+  userName: string;
+  categories: {
+    [key: string]: CategoryScore;  // key format: "difficulty-boardSize"
+  };
+  timestamp: Date;
+}

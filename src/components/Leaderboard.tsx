@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { GameScore, GameDifficulty, BoardSize } from '../types/game';
+import { UserScores, GameDifficulty, BoardSize, CategoryScore } from '../types/game';
 import { Trophy, Medal, Award, ChevronDown, ChevronUp } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 
@@ -12,7 +12,7 @@ type LeaderboardCategory = {
 
 export const Leaderboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
-  const [scores, setScores] = useState<GameScore[]>([]);
+  const [scores, setScores] = useState<UserScores[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<LeaderboardCategory>({
     difficulty: 'hard',
@@ -32,7 +32,9 @@ export const Leaderboard: React.FC = () => {
   const categories = useMemo(() => {
     const uniqueCategories = new Set<string>();
     scores.forEach(score => {
-      uniqueCategories.add(`${score.difficulty}-${score.boardSize}`);
+      Object.keys(score.categories).forEach(key => {
+        uniqueCategories.add(key);
+      });
     });
     return Array.from(uniqueCategories).map(cat => {
       const [difficulty, boardSize] = cat.split('-');
@@ -44,18 +46,24 @@ export const Leaderboard: React.FC = () => {
   }, [scores]);
 
   const filteredScores = useMemo(() => {
-    return scores.filter(
-      score =>
-        score.difficulty === selectedCategory.difficulty &&
-        score.boardSize === selectedCategory.boardSize
-    ).sort((a, b) => {
-      // Calculate win rate
-      const aTotal = a.wins + a.losses + a.draws;
-      const bTotal = b.wins + b.losses + b.draws;
-      const aWinRate = aTotal > 0 ? (a.wins / aTotal) * 100 : 0;
-      const bWinRate = bTotal > 0 ? (b.wins / bTotal) * 100 : 0;
-      return bWinRate - aWinRate;
-    }).slice(0, 5);
+    const categoryKey = `${selectedCategory.difficulty}-${selectedCategory.boardSize}`;
+    return scores
+      .filter(score => score.categories[categoryKey])
+      .map(score => ({
+        userId: score.userId,
+        userName: score.userName,
+        stats: score.categories[categoryKey]
+      }))
+      .sort((a, b) => {
+        const aStats = a.stats;
+        const bStats = b.stats;
+        const aTotal = aStats.wins + aStats.losses + aStats.draws;
+        const bTotal = bStats.wins + bStats.losses + bStats.draws;
+        const aWinRate = aTotal > 0 ? (aStats.wins / aTotal) * 100 : 0;
+        const bWinRate = bTotal > 0 ? (bStats.wins / bTotal) * 100 : 0;
+        return bWinRate - aWinRate;
+      })
+      .slice(0, 5);
   }, [scores, selectedCategory]);
 
   useEffect(() => {
@@ -103,10 +111,10 @@ export const Leaderboard: React.FC = () => {
     }
   }, []);
 
-  const formatWinRate = (score: GameScore) => {
-    const total = score.wins + score.losses + score.draws;
+  const formatWinRate = (stats: CategoryScore) => {
+    const total = stats.wins + stats.losses + stats.draws;
     if (total === 0) return '0%';
-    return `${((score.wins / total) * 100).toFixed(1)}%`;
+    return `${((stats.wins / total) * 100).toFixed(1)}%`;
   };
 
   return (
@@ -172,10 +180,10 @@ export const Leaderboard: React.FC = () => {
             <div className="flex-1">
               <p className="font-semibold">{score.userName}</p>
               <p className="text-sm text-gray-600">
-                Win rate: {formatWinRate(score)}
+                Win rate: {formatWinRate(score.stats)}
               </p>
               <p className="text-xs text-gray-500">
-                {score.wins}W · {score.losses}L · {score.draws}D
+                {score.stats.wins}W · {score.stats.losses}L · {score.stats.draws}D
               </p>
             </div>
           </div>

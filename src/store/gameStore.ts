@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { GameState, Player, GameDifficulty, BoardSize, Cell } from '../types/game';
+import { GameState, Player, GameDifficulty, BoardSize, Cell, CategoryScore } from '../types/game';
 import { calculateWinner, minimax } from '../utils/gameLogic';
 import { auth, db } from '../lib/firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
@@ -15,34 +15,47 @@ interface GameStore extends GameState {
 const createEmptyBoard = (size: BoardSize): Cell[][] => 
   Array(size).fill(null).map(() => Array(size).fill(null));
 
+const getCategoryKey = (difficulty: GameDifficulty, boardSize: BoardSize): string => 
+  `${difficulty}-${boardSize}`;
+
 const updateUserScore = async (result: 'win' | 'loss' | 'draw', difficulty: GameDifficulty, boardSize: BoardSize) => {
   const user = auth.currentUser;
   if (!user) return;
 
   try {
     const scoreRef = doc(db, 'scores', user.uid);
+    const categoryKey = getCategoryKey(difficulty, boardSize);
     const scoreDoc = await getDoc(scoreRef);
 
     if (scoreDoc.exists()) {
       const data = scoreDoc.data();
-      await updateDoc(scoreRef, {
-        wins: result === 'win' ? (data.wins || 0) + 1 : data.wins || 0,
-        losses: result === 'loss' ? (data.losses || 0) + 1 : data.losses || 0,
-        draws: result === 'draw' ? (data.draws || 0) + 1 : data.draws || 0,
-        timestamp: new Date(),
-        difficulty,
-        boardSize
+      const currentCategory = data.categories?.[categoryKey] || { wins: 0, losses: 0, draws: 0 };
+      
+      const updatedCategories = {
+        ...data.categories,
+        [categoryKey]: {
+          wins: result === 'win' ? currentCategory.wins + 1 : currentCategory.wins,
+          losses: result === 'loss' ? currentCategory.losses + 1 : currentCategory.losses,
+          draws: result === 'draw' ? currentCategory.draws + 1 : currentCategory.draws
+        }
+      };
+
+      await updateDoc(scoreRef, { 
+        categories: updatedCategories,
+        timestamp: new Date()
       });
     } else {
       await setDoc(scoreRef, {
         userId: user.uid,
         userName: user.displayName || 'Anonymous',
-        wins: result === 'win' ? 1 : 0,
-        losses: result === 'loss' ? 1 : 0,
-        draws: result === 'draw' ? 1 : 0,
-        timestamp: new Date(),
-        difficulty,
-        boardSize
+        categories: {
+          [categoryKey]: {
+            wins: result === 'win' ? 1 : 0,
+            losses: result === 'loss' ? 1 : 0,
+            draws: result === 'draw' ? 1 : 0
+          }
+        },
+        timestamp: new Date()
       });
     }
   } catch (error) {
@@ -50,7 +63,7 @@ const updateUserScore = async (result: 'win' | 'loss' | 'draw', difficulty: Game
   }
 };
 
-export const useGameStore = create<GameStore>((set, get) => ({
+const useGameStore = create<GameStore>((set, get) => ({
   board: createEmptyBoard(3),
   currentPlayer: 'X',
   winner: null,
@@ -121,3 +134,5 @@ export const useGameStore = create<GameStore>((set, get) => ({
   setBoardSize: (size) => get().initializeBoard(size),
   resetGame: () => get().initializeBoard(get().boardSize),
 }));
+
+export { useGameStore };
