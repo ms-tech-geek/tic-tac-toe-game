@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import { UserScores, GameDifficulty, BoardSize, CategoryScore } from '../types/game';
 import { Trophy, Medal, Award, ChevronDown, ChevronUp } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
+import { PlayerProfile } from './PlayerProfile';
 
 type LeaderboardCategory = {
   difficulty: GameDifficulty;
@@ -14,6 +15,7 @@ export const Leaderboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [scores, setScores] = useState<UserScores[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPlayer, setSelectedPlayer] = useState<UserScores | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<LeaderboardCategory>({
     difficulty: 'hard',
     boardSize: 3
@@ -174,7 +176,11 @@ export const Leaderboard: React.FC = () => {
         ) : filteredScores.map((score, index) => (
           <div
             key={score.userId}
-            className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg"
+            className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
+            onClick={() => {
+              const playerData = scores.find(s => s.userId === score.userId);
+              if (playerData) setSelectedPlayer(playerData);
+            }}
           >
             {getRankIndicator(index)}
             
@@ -195,6 +201,13 @@ export const Leaderboard: React.FC = () => {
           Showing top 5 players for {selectedCategory.difficulty} mode
           {' '}{selectedCategory.boardSize}x{selectedCategory.boardSize}
         </div>
+        
+        {selectedPlayer && (
+          <PlayerProfile
+            playerData={selectedPlayer}
+            onClose={() => setSelectedPlayer(null)}
+          />
+        )}
       </div>
     </div>
   );
