@@ -32,9 +32,11 @@ export const Leaderboard: React.FC = () => {
   const categories = useMemo(() => {
     const uniqueCategories = new Set<string>();
     scores.forEach(score => {
-      Object.keys(score.categories).forEach(key => {
+      if (score.categories) {
+        Object.keys(score.categories).forEach(key => {
         uniqueCategories.add(key);
-      });
+        });
+      }
     });
     return Array.from(uniqueCategories).map(cat => {
       const [difficulty, boardSize] = cat.split('-');
@@ -48,7 +50,7 @@ export const Leaderboard: React.FC = () => {
   const filteredScores = useMemo(() => {
     const categoryKey = `${selectedCategory.difficulty}-${selectedCategory.boardSize}`;
     return scores
-      .filter(score => score.categories[categoryKey])
+      .filter(score => score.categories && score.categories[categoryKey])
       .map(score => ({
         userId: score.userId,
         userName: score.userName,
@@ -79,7 +81,7 @@ export const Leaderboard: React.FC = () => {
           const newScores = snapshot.docs.map(doc => ({
             ...doc.data(),
             timestamp: doc.data().timestamp?.toDate() || new Date(),
-          })) as GameScore[];
+          })) as UserScores[];
           setScores(newScores);
           setError(null);
           setLoading(false);
