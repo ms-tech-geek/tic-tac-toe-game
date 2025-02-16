@@ -70,7 +70,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   makeMove: (row, col) => {
     const state = get();
-    if (state.board[row][col] || state.winner) return;
+    if (state.board[row][col] || state.winner || state.currentPlayer !== 'X') return;
 
     const newBoard = state.board.map(row => [...row]);
     newBoard[row][col] = state.currentPlayer;
@@ -81,22 +81,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ board: newBoard, isGameOver, winner });
 
     if (!isGameOver) {
+      // Switch to computer's turn
       set({ currentPlayer: 'O' });
       
       // Computer's turn
       setTimeout(() => {
         const { difficulty, board } = get();
         const computerMove = minimax(board, difficulty);
+        
         if (computerMove) {
-          get().makeMove(computerMove.row, computerMove.col);
+          const newBoard = board.map(row => [...row]);
+          newBoard[computerMove.row][computerMove.col] = 'O';
+          
+          const winner = calculateWinner(newBoard);
+          const isGameOver = winner !== null || newBoard.flat().every(cell => cell !== null);
+          
+          set({ 
+            board: newBoard,
+            isGameOver,
+            winner,
+            currentPlayer: isGameOver ? 'O' : 'X'  // Switch back to player's turn if game isn't over
+          });
+          
+          // Update score in Firestore if game is over
+          if (isGameOver && winner) {
+            const result = winner === 'X' ? 'win' : winner === 'O' ? 'loss' : 'draw';
+            updateUserScore(result, get().difficulty, get().boardSize);
+          }
         }
       }, 500);
-    } else {
+    } else if (winner) {
       // Update score in Firestore
-      if (winner) {
-        const result = winner === 'X' ? 'win' : winner === 'O' ? 'loss' : 'draw';
-        updateUserScore(result, get().difficulty, get().boardSize);
-      }
+      const result = winner === 'X' ? 'win' : winner === 'O' ? 'loss' : 'draw';
+      updateUserScore(result, get().difficulty, get().boardSize);
     }
   },
 
