@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { UserScores, GameDifficulty, BoardSize, CategoryScore, UserProfile } from '../types/game';
-import { Trophy, Medal, Award, Trash2, X } from 'lucide-react';
+import { Trophy, Medal, Award, Trash2, X, ChevronDown } from 'lucide-react';
 import { PlayerProfile } from './PlayerProfile';
 import { deleteDoc, getDocs, doc, getDoc } from 'firebase/firestore';
 import { FirebaseError } from 'firebase/app';
@@ -25,6 +25,13 @@ export const Leaderboard: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<LeaderboardCategory>({
     difficulty: 'easy',
     boardSize: 3
+  });
+  const [isFilterOpen, setIsFilterOpen] = useState<{
+    difficulty: boolean;
+    boardSize: boolean;
+  }>({
+    difficulty: false,
+    boardSize: false
   });
 
   const getRankIndicator = (index: number) => {
@@ -158,48 +165,90 @@ export const Leaderboard: React.FC = () => {
       </div>
       
       <div className="mb-4 grid grid-cols-2 gap-2">
-        <div className="col-span-2 mb-2">
+        <div className="col-span-1 relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Difficulty Level
           </label>
-          <div className="flex gap-2">
-            {['easy', 'medium', 'hard'].map((difficulty: GameDifficulty) => (
-              <button
-                key={difficulty}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors
-                  ${
-                    selectedCategory.difficulty === difficulty
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                onClick={() => setSelectedCategory(prev => ({ ...prev, difficulty }))}
-              >
-                {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={() => setIsFilterOpen(prev => ({ ...prev, difficulty: !prev.difficulty }))}
+            className="w-full flex items-center justify-between px-4 py-2 bg-white border border-gray-300 
+              rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-left"
+          >
+            <span className="font-medium capitalize">
+              {selectedCategory.difficulty}
+            </span>
+            <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform
+              ${isFilterOpen.difficulty ? 'rotate-180' : ''}`} 
+            />
+          </button>
+          
+          {isFilterOpen.difficulty && (
+            <>
+              <div 
+                className="fixed inset-0 z-10" 
+                onClick={() => setIsFilterOpen(prev => ({ ...prev, difficulty: false }))}
+              />
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 
+                rounded-lg shadow-lg z-20 py-1">
+                {['easy', 'medium', 'hard'].map((difficulty: GameDifficulty) => (
+                  <button
+                    key={difficulty}
+                    className={`w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors
+                      ${selectedCategory.difficulty === difficulty ? 'bg-blue-50 text-blue-600' : ''}`}
+                    onClick={() => {
+                      setSelectedCategory(prev => ({ ...prev, difficulty }));
+                      setIsFilterOpen(prev => ({ ...prev, difficulty: false }));
+                    }}
+                  >
+                    <span className="capitalize">{difficulty}</span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
         
-        <div className="col-span-2">
+        <div className="col-span-1 relative">
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Board Size
           </label>
-          <div className="flex gap-2">
-            {[3, 4, 5].map((size: BoardSize) => (
-              <button
-                key={size}
-                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors
-                  ${
-                    selectedCategory.boardSize === size
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                onClick={() => setSelectedCategory(prev => ({ ...prev, boardSize: size }))}
-              >
-                {size} x {size}
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={() => setIsFilterOpen(prev => ({ ...prev, boardSize: !prev.boardSize }))}
+            className="w-full flex items-center justify-between px-4 py-2 bg-white border border-gray-300 
+              rounded-lg shadow-sm hover:bg-gray-50 transition-colors text-left"
+          >
+            <span className="font-medium">
+              {selectedCategory.boardSize} x {selectedCategory.boardSize}
+            </span>
+            <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform
+              ${isFilterOpen.boardSize ? 'rotate-180' : ''}`} 
+            />
+          </button>
+          
+          {isFilterOpen.boardSize && (
+            <>
+              <div 
+                className="fixed inset-0 z-10" 
+                onClick={() => setIsFilterOpen(prev => ({ ...prev, boardSize: false }))}
+              />
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 
+                rounded-lg shadow-lg z-20 py-1">
+                {[3, 4, 5].map((size: BoardSize) => (
+                  <button
+                    key={size}
+                    className={`w-full px-4 py-2 text-left hover:bg-gray-50 transition-colors
+                      ${selectedCategory.boardSize === size ? 'bg-blue-50 text-blue-600' : ''}`}
+                    onClick={() => {
+                      setSelectedCategory(prev => ({ ...prev, boardSize: size }));
+                      setIsFilterOpen(prev => ({ ...prev, boardSize: false }));
+                    }}
+                  >
+                    {size} x {size}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
       
