@@ -88,21 +88,20 @@ const saveUserSettings = async (difficulty: GameDifficulty, boardSize: BoardSize
 
 const loadUserSettings = async () => {
   const user = auth.currentUser;
-  if (!user) return null;
+  if (!user) {
+    console.log('No user logged in, using default settings');
+    return null;
+  }
 
   try {
     const settingsRef = doc(db, 'user_settings', user.uid);
     const settingsDoc = await getDoc(settingsRef);
 
     if (settingsDoc.exists()) {
-      const data = settingsDoc.data();
-      if (data) {
-        console.log('Loaded settings for user:', user.uid, data);
-        return {
-          difficulty: data.difficulty as GameDifficulty,
-          boardSize: data.boardSize as BoardSize
-        };
-      }
+      return settingsDoc.data() as {
+        difficulty: GameDifficulty;
+        boardSize: BoardSize;
+      };
     }
     
     // If no settings exist, create default settings
@@ -112,39 +111,64 @@ const loadUserSettings = async () => {
     };
     
     await saveUserSettings(defaultSettings.difficulty, defaultSettings.boardSize);
+    console.log('Created default settings for user:', user.uid);
     return defaultSettings;
     
   } catch (error) {
-    console.error('Error loading settings:', error);
-    throw error;
+    console.error('Error loading settings:', {
+      error,
+      userId: user.uid,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+    // Return default settings instead of throwing
+    return {
+      difficulty: 'easy' as GameDifficulty,
+      boardSize: 3 as BoardSize
+    };
   }
 };
 
 const useGameStore = create<GameStore>((set, get) => {
-  // Set up auth state listener
-  auth.onAuthStateChanged(async (user) => {
-    if (!user) {
-      // Reset to default settings when user logs out
-      set({
-        difficulty: 'easy',
-        boardSize: 3
-      });
-      get().initializeBoard(3);
-    } else {
-      try {
-        const settings = await loadUserSettings();
-        if (settings) {
-          set({ 
-            difficulty: settings.difficulty,
-            boardSize: settings.boardSize
+  // Initialize auth state listener
+  let unsubscribe: (() => void) | null = null;
+
+  // Set up auth state listener when store is created
+  const setupAuthListener = () => {
+    unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (!user) {
+        console.log('User logged out, resetting to default settings');
+        set({
+          difficulty: 'easy',
+          boardSize: 3
+        });
+        get().initializeBoard(3);
+      } else {
+        console.log('User logged in, loading settings');
+        try {
+          const settings = await loadUserSettings();
+          if (settings) {
+            console.log('Applying loaded settings:', settings);
+            set({ 
+              difficulty: settings.difficulty,
+              boardSize: settings.boardSize
+            });
+            get().initializeBoard(settings.boardSize);
+          }
+        } catch (error) {
+          console.error('Error in auth state change:', error);
+          // Use default settings on error
+          set({
+            difficulty: 'easy',
+            boardSize: 3
           });
-          get().initializeBoard(settings.boardSize);
+          get().initializeBoard(3);
         }
-      } catch (error) {
-        console.error('Error in auth state change:', error);
       }
-    }
-  });
+    });
+  };
+
+  // Set up listener immediately
+  setupAuthListener();
 
   return {
   board: createEmptyBoard(3),
@@ -233,8 +257,10 @@ const useGameStore = create<GameStore>((set, get) => {
   loadSettings: async () => {
     if (auth.currentUser) {
       try {
+        console.log('Loading settings for user:', auth.currentUser.uid);
         const settings = await loadUserSettings();
         if (settings) {
+          console.log('Successfully loaded settings:', settings);
           set({ 
             difficulty: settings.difficulty,
             boardSize: settings.boardSize
@@ -243,10 +269,23 @@ const useGameStore = create<GameStore>((set, get) => {
           console.log('Settings loaded for user:', auth.currentUser.uid);
         }
       } catch (error) {
-        console.error('Error loading settings:', error);
+        console.error('Error in loadSettings:', error);
+        // Use default settings on error
+        set({
+          difficulty: 'easy',
+          boardSize: 3
+        });
+        get().initializeBoard(3);
       }
     }
-  }
+  },
+
+  // Cleanup function for auth listener
+  cleanup: () => {
+    if (unsubscribe) {
+      unsubscribe();
+    }
+  },
   };
 });
 
