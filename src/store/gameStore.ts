@@ -68,16 +68,16 @@ const updateUserScore = async (result: 'win' | 'loss' | 'draw', difficulty: Game
 const saveUserSettings = async (difficulty: GameDifficulty, boardSize: BoardSize) => {
   const user = auth.currentUser;
   if (!user) return;
-  
+
   try {
     const settingsRef = doc(db, 'user_settings', user.uid);
-    await setDoc(settingsRef, { 
+    await setDoc(settingsRef, {
       userId: user.uid,
       userName: user.displayName || 'Anonymous',
       difficulty,
       boardSize,
       updatedAt: new Date()
-    });
+    }, { merge: true });  // Use merge to prevent overwriting other fields
     
     console.log('Settings saved successfully');
   } catch (error) {
@@ -123,7 +123,14 @@ const loadUserSettings = async () => {
 const useGameStore = create<GameStore>((set, get) => {
   // Set up auth state listener
   auth.onAuthStateChanged(async (user) => {
-    if (user) {
+    if (!user) {
+      // Reset to default settings when user logs out
+      set({
+        difficulty: 'easy',
+        boardSize: 3
+      });
+      get().initializeBoard(3);
+    } else {
       try {
         const settings = await loadUserSettings();
         if (settings) {
@@ -140,7 +147,6 @@ const useGameStore = create<GameStore>((set, get) => {
   });
 
   return {
-  }
   board: createEmptyBoard(3),
   currentPlayer: 'X',
   winner: null,
@@ -241,7 +247,7 @@ const useGameStore = create<GameStore>((set, get) => {
       }
     }
   }
-}
-)
+  };
+});
 
 export { useGameStore };
