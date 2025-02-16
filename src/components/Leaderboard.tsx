@@ -252,16 +252,6 @@ export const Leaderboard: React.FC = () => {
         </div>
       </div>
       
-      <div className="bg-gray-50 rounded-lg p-4 mb-4">
-        <h3 className="text-lg font-semibold mb-2">
-          {selectedCategory.difficulty.charAt(0).toUpperCase() + 
-           selectedCategory.difficulty.slice(1)} Mode - {selectedCategory.boardSize}x{selectedCategory.boardSize}
-        </h3>
-        <p className="text-sm text-gray-600">
-          Showing top players for this category
-        </p>
-      </div>
-      
       <div className="space-y-4">
         {loading ? (
           <div className="text-center p-4 text-gray-500">
@@ -301,10 +291,9 @@ export const Leaderboard: React.FC = () => {
             }}
           >
             <div className="flex items-center gap-3 flex-1">
-              <div className="relative">
-                {getRankIndicator(index)}
+              <div>
                 <img
-                  src={score.photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${score.userName}`}
+                  src={score.photoURL}
                   alt={score.userName}
                   className="w-12 h-12 rounded-full object-cover"
                 />
@@ -319,20 +308,18 @@ export const Leaderboard: React.FC = () => {
                 </div>
               </div>
               
-              <div className="text-right">
+              <div className="flex flex-col items-center justify-center">
                 <div className="text-lg font-bold text-blue-600">
                   {formatWinRate(score.stats)}
                 </div>
-                <div className="text-xs text-gray-500">Win Rate</div>
+                <div className="text-xs text-gray-500 mb-1">Win Rate</div>
+                <div className="transform scale-150">
+                  {getRankIndicator(index)}
+                </div>
               </div>
             </div>
           </button>
         ))}
-        
-        <div className="text-center text-sm text-gray-500 mt-2">
-          Showing top 5 players for {selectedCategory.difficulty} mode
-          {' '}{selectedCategory.boardSize}x{selectedCategory.boardSize}
-        </div>
         
         {selectedPlayer && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
