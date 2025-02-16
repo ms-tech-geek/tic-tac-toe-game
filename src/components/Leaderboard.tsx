@@ -1,10 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import { UserScores, GameDifficulty, BoardSize, CategoryScore } from '../types/game';
-import { Trophy, Medal, Award, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trophy, Medal, Award, Trash2 } from 'lucide-react';
 import { FirebaseError } from 'firebase/app';
 import { PlayerProfile } from './PlayerProfile';
+import { deleteDoc, getDocs } from 'firebase/firestore';
 
 type LeaderboardCategory = {
   difficulty: GameDifficulty;
@@ -17,10 +18,9 @@ export const Leaderboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedPlayer, setSelectedPlayer] = useState<UserScores | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<LeaderboardCategory>({
-    difficulty: 'hard',
+    difficulty: 'easy',
     boardSize: 3
   });
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const getRankIndicator = (index: number) => {
     switch (index) {
@@ -124,41 +124,88 @@ export const Leaderboard: React.FC = () => {
   return (
     <div className="w-full max-w-md bg-white rounded-lg shadow-md p-6">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-        <Trophy className="w-6 h-6 text-yellow-500" />
-        <h2 className="text-xl font-bold">Leaderboard</h2>
-        </div>
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          {isExpanded ? (
-            <ChevronUp className="w-5 h-5" />
-          ) : (
-            <ChevronDown className="w-5 h-5" />
-          )}
-        </button>
+        <h2 className="text-xl font-bold flex items-center gap-2">
+          <Trophy className="w-6 h-6 text-yellow-500" />
+          Leaderboard
+        </h2>
+        {auth.currentUser && (
+          <button
+            onClick={async () => {
+              if (window.confirm('Are you sure you want to reset all scores? This cannot be undone.')) {
+                try {
+                  const snapshot = await getDocs(collection(db, 'scores'));
+                  await Promise.all(snapshot.docs.map(doc => deleteDoc(doc.ref)));
+                  alert('All scores have been reset successfully.');
+                } catch (error) {
+                  console.error('Error resetting scores:', error);
+                  alert('Failed to reset scores. Please try again.');
+                }
+              }
+            }}
+            className="flex items-center gap-2 px-3 py-1 text-sm bg-red-100 text-red-600 rounded-md 
+              hover:bg-red-200 transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            Reset All
+          </button>
+        )}
       </div>
       
-      {isExpanded && (
-        <div className="mb-4 grid grid-cols-2 gap-2">
-          {categories.map(category => (
-            <button
-              key={`${category.difficulty}-${category.boardSize}`}
-              className={`px-3 py-2 rounded-md text-sm font-medium transition-colors
-                ${
-                  selectedCategory.difficulty === category.difficulty &&
-                  selectedCategory.boardSize === category.boardSize
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              onClick={() => setSelectedCategory(category)}
-            >
-              {category.difficulty} {category.boardSize}x{category.boardSize}
-            </button>
-          ))}
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        <div className="col-span-2 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Difficulty Level
+          </label>
+          <div className="flex gap-2">
+            {['easy', 'medium', 'hard'].map((difficulty: GameDifficulty) => (
+              <button
+                key={difficulty}
+                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors
+                  ${
+                    selectedCategory.difficulty === difficulty
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                onClick={() => setSelectedCategory(prev => ({ ...prev, difficulty }))}
+              >
+                {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
-      )}
+        
+        <div className="col-span-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Board Size
+          </label>
+          <div className="flex gap-2">
+            {[3, 4, 5].map((size: BoardSize) => (
+              <button
+                key={size}
+                className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors
+                  ${
+                    selectedCategory.boardSize === size
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                onClick={() => setSelectedCategory(prev => ({ ...prev, boardSize: size }))}
+              >
+                {size} x {size}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-gray-50 rounded-lg p-4 mb-4">
+        <h3 className="text-lg font-semibold mb-2">
+          {selectedCategory.difficulty.charAt(0).toUpperCase() + 
+           selectedCategory.difficulty.slice(1)} Mode - {selectedCategory.boardSize}x{selectedCategory.boardSize}
+        </h3>
+        <p className="text-sm text-gray-600">
+          Showing top players for this category
+        </p>
+      </div>
       
       <div className="space-y-4">
         {loading ? (
@@ -172,6 +219,10 @@ export const Leaderboard: React.FC = () => {
         ) : scores.length === 0 ? (
           <div className="text-center p-4 text-gray-500">
             <p>No scores yet. Be the first to play!</p>
+          </div>
+        ) : filteredScores.length === 0 ? (
+          <div className="text-center p-4 text-gray-500">
+            <p>No scores yet for {selectedCategory.difficulty} mode {selectedCategory.boardSize}x{selectedCategory.boardSize}</p>
           </div>
         ) : filteredScores.map((score, index) => (
           <div
